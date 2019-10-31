@@ -17,10 +17,10 @@
 cmake_minimum_required(VERSION 2.8)
 
 # get tensorflow include dirs, see https://www.tensorflow.org/how_tos/adding_an_op/
-execute_process(COMMAND python -c "import tensorflow; print(tensorflow.sysconfig.get_include())" OUTPUT_VARIABLE TF_INC)
-execute_process(COMMAND python -c "import tensorflow; print(tensorflow.sysconfig.get_lib())" OUTPUT_VARIABLE TF_LIB)
-execute_process(COMMAND python -c "import tensorflow; print(tensorflow.sysconfig.get_compile_flags())" OUTPUT_VARIABLE TF_COMPILE_FLAGS)
-execute_process(COMMAND python -c "import tensorflow; print(tensorflow.sysconfig.get_link_flags())" OUTPUT_VARIABLE TF_LINK_FLAGS)
+execute_process(COMMAND python3 -c "import tensorflow; print(tensorflow.sysconfig.get_include())" OUTPUT_VARIABLE TF_INC)
+execute_process(COMMAND python3 -c "import tensorflow; print(tensorflow.sysconfig.get_lib())" OUTPUT_VARIABLE TF_LIB)
+execute_process(COMMAND python3 -c "import tensorflow; print(tensorflow.sysconfig.get_compile_flags())" OUTPUT_VARIABLE TF_COMPILE_FLAGS)
+execute_process(COMMAND python3 -c "import tensorflow; print(tensorflow.sysconfig.get_link_flags())" OUTPUT_VARIABLE TF_LINK_FLAGS)
 
 if(WIN32)
     string(REPLACE "\r\n" "" TF_INC "${TF_INC}")
@@ -50,24 +50,40 @@ message("TF_COMPILE_FLAGS: ${TF_COMPILE_FLAGS}")
 message("TF_LINK_FLAGS: ${TF_LINK_FLAGS}")
 
 find_package(CUDA)
+IF( CUDA_FOUND )
+  set(TF_NSYNC_INC "${TF_INC}/external/nsync/public/")
+  message(${TF_NSYNC_INC})
+  include_directories(${TF_NSYNC_INC})
 
-set(TF_NSYNC_INC "${TF_INC}/external/nsync/public/")
-message(${TF_NSYNC_INC})
-include_directories(${TF_NSYNC_INC})
+  # C++11 required for tensorflow
+  set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC ${CMAKE_CXX_FLAGS} ${TF_COMPILE_FLAGS} -DGOOGLE_CUDA")
+  message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
-# C++11 required for tensorflow
-set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC ${CMAKE_CXX_FLAGS} ${TF_COMPILE_FLAGS} -DGOOGLE_CUDA")
-message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+  #pass flags to c++ compiler
+  set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -DNDEBUG")
 
-#pass flags to c++ compiler
-set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -DNDEBUG")
+  # build the actual operation which can be used directory
+  include_directories(${TF_INC})
+  link_directories(${TF_LIB})
+  include_directories("/usr/local/")
 
-# build the actual operation which can be used directory
-include_directories(${TF_INC})
-link_directories(${TF_LIB})
-include_directories("/usr/local/")
+  cuda_add_library(compute_depth SHARED compute_depth.cu compute_depth.cc
+      OPTIONS -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC --expt-relaxed-constexpr)
+  target_link_libraries(compute_depth ${TF_LINK_FLAGS})
+ELSE()
+  set(TF_NSYNC_INC "${TF_INC}/external/nsync/public/")
+  message(${TF_NSYNC_INC})
+  include_directories(${TF_NSYNC_INC})
 
-cuda_add_library(compute_depth SHARED compute_depth.cu compute_depth.cc
-    OPTIONS -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC --expt-relaxed-constexpr)
-target_link_libraries(compute_depth ${TF_LINK_FLAGS})
+  # C++11 required for tensorflow
+  set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC ${CMAKE_CXX_FLAGS} ${TF_COMPILE_FLAGS} ")
+  message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+  
+  include_directories(${TF_INC})
+  link_directories(${TF_LIB})
+  include_directories("/usr/local/")
+
+  add_library(compute_depth SHARED compute_depth.cc)
+  target_link_libraries(compute_depth ${TF_LINK_FLAGS})
+ENDIF()
