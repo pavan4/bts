@@ -87,3 +87,7 @@ ELSE()
   add_library(compute_depth SHARED compute_depth.cc)
   target_link_libraries(compute_depth ${TF_LINK_FLAGS})
 ENDIF()
+
+install(TARGETS compute_depth
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)

@@ -16,8 +16,12 @@
 
 import tensorflow as tf
 from tensorflow.python.framework import ops
+import os
 
-compute_depth_grad_module = tf.load_op_library('custom_layer/build/libcompute_depth.so')
+if os.path.isfile('/usr/local/lib/libcompute_depth.so'):
+    compute_depth_grad_module = tf.load_op_library('/usr/local/lib/libcompute_depth.so')
+else:
+    compute_depth_grad_module = tf.load_op_library('custom_layer/build/libcompute_depth.so')
 
 @ops.RegisterGradient("ComputeDepth")
 def _compute_depth_grad_cc(op, depth_grad):
@@ -29,5 +33,5 @@ def _compute_depth_grad_cc(op, depth_grad):
     :param grad: gradient with respect to the output of the `compute_depth` op.
     :return: gradients with respect to the input of `compute_depth`.
     """
-    
+
     return compute_depth_grad_module.compute_depth_grad(depth_grad, op.inputs[0], op.inputs[1])
