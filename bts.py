@@ -26,7 +26,10 @@ sys.path.append("./custom_layer/")
 
 import _compute_depth_grad
 
-compute_depth_module = tf.load_op_library('custom_layer/build/libcompute_depth.so')
+if os.path.isfile('/usr/local/lib/libcompute_depth.so'):
+    compute_depth_grad_module = tf.load_op_library('/usr/local/lib/libcompute_depth.so')
+else:
+    compute_depth_grad_module = tf.load_op_library('custom_layer/build/libcompute_depth.so')
 
 bts_parameters = namedtuple('parameters', 'encoder, '
                                           'height, width, '
