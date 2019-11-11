@@ -21,6 +21,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import sys
+import os
 
 sys.path.append("./custom_layer/")
 
